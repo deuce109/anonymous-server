@@ -1,0 +1,19 @@
+{
+  "name": "anonymous-server",
+  "version": "1.0.0",
+  "description": "Server for anonymous objects",
+  "main": "./src/index.ts",
+  "scripts": {
+    "start": "nodemon --config ./util/nodemon.json",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "host": "ts-node ./src/index.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/express": "^4.17.2",
+    "@types/node": "^12.12.7",
+    "express": "^4.17.1",
+    "redis": "^2.8.0"
+  }
+}
