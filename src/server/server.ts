@@ -57,6 +57,7 @@ export class ExpressServer implements Server {
       res.status(success ? 200 : 500).send();
     });
 
+    //Health info for the data controller
     app.get("/health", async (req: Request, res: Response) => {
       let health: any = {};
       health["serverStatus"] = "Up";
@@ -64,7 +65,8 @@ export class ExpressServer implements Server {
       res.send(health);
     });
 
-    app.get("/logs", async (req: Request, res: Response) => {
+    //Download server logs
+    app.get("/logs/:path", async (req: Request, res: Response) => {
       let logs = readFileSync("./server.log");
       res.send(logs);
     });
