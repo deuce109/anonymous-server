@@ -1,97 +1,78 @@
-import { Server } from "./index";
-import { Express, Request, Response } from "express";
-import { Database } from "../database";
-import express = require("express");
-import { readFileSync } from "fs";
+import { IServer } from './index'
+import { Express } from 'express'
+import { IDatabase } from '../database'
+import express = require('express')
+import { log } from '../utils'
+import { ObjectHandler, ServerHandler, LogHandler, ConfigHandler } from '../handlers'
 
-export class ExpressServer implements Server {
-  constructor(app: Express, port: number, db: Database) {
-    //Allows us to access request.body as a JSON Object
-    app.use(express.json());
+export class ExpressServer implements IServer {
+  constructor(app: Express, port: number, db: IDatabase) {
 
-    //Get all items for a specified app
-    app.get("/:app/objects", async (req: Request, res: Response) => {
-      let result = { result: await db.getAll(req.params.app) };
-      res.send(result);
-    });
+    this.objectHandler = new ObjectHandler(db)
+    this.serverHandler = new ServerHandler(db)
+    this.configHandler = new ConfigHandler(db)
 
-    //Get specified item for a specified app
-    app.get("/:app/objects/:id", async (req: Request, res: Response) => {
-      let result = (await db.get(req.params.app, req.params.id)) || null;
-      res.status(result != null ? 200 : 500).send(result);
-    });
+    // Allows us to access request.body as a JSON Object
+    app.use(express.json())
 
-    //Overwrite a specific item for a specified app
-    app.put("/:app/objects/:id", async (req: Request, res: Response) => {
-      let success = await this.db.overwrite(
-        req.params.app,
-        req.params.id,
-        req.body
-      );
-      res.status(success ? 200 : 500).send();
-    });
+    // Get all items for a specified app
+    app.get('/:app/objects', this.objectHandler.getAll)
 
-    //Update a specific item for a specified app
-    app.patch("/:app/objects/:id", async (req: Request, res: Response) => {
-      let success = await this.db.update(
-        req.params.app,
-        req.params.id,
-        req.body
-      );
-      res.status(success ? 200 : 500).send();
-    });
+    // Get specified item for a specified app
+    app.get('/:app/objects/:id', this.objectHandler.getById)
 
-    //Add a specific item for a specified app
-    app.post("/:app/objects", async (req: Request, res: Response) => {
-      console.log(JSON.stringify(req.body));
-      db.insert(req.body, req.params.app);
-      res.status(200).send();
-    });
+    // Overwrite a specific item for a specified app
+    app.put('/:app/objects/:id', this.objectHandler.overwrite)
 
-    //Delete a specific item for a specified app
-    app.delete("/:app/objects/:id", async (req: Request, res: Response) => {
-      let success: boolean = await this.db.delete(
-        req.params.app,
-        req.params.id
-      );
-      res.status(success ? 200 : 500).send();
-    });
+    // Update a specific item for a specified app
+    app.patch('/:app/objects/:id', this.objectHandler.updateWithMerge)
 
-    //Health info for the data controller
-    app.get("/health", async (req: Request, res: Response) => {
-      let health: any = {};
-      health["serverStatus"] = "Up";
-      health["databaseStatus"] = this.db.ping() ? "Connected" : "Disconnected";
-      res.send(health);
-    });
+    // Add a specific item for a specified app
+    app.post('/:app/objects', this.objectHandler.insert)
 
-    //Download server logs
-    app.get("/logs/:path", async (req: Request, res: Response) => {
-      let logs = readFileSync("./server.log");
-      res.send(logs);
-    });
+    // Delete a specific item for a specified app
+    app.delete('/:app/objects/:id', this.objectHandler.delete)
 
-    //Enable if not in production
-    if (process.env.NODE_ENV !== "production") {
-      //Endpoint to clear database for a specific app
-      app.delete("/:app/objects", async (req: Request, res: Response) => {
-        let success = await this.db.delAll(req.params.app);
-        res.status(success ? 200 : 500).send();
-      });
+    // Health info for the data controller
+    app.get('/health', this.serverHandler.health )
+
+    // Download server logs
+    app.get('/logs/:type', LogHandler.getLogsByLevel )
+
+    app.get('/logs', LogHandler.getLogs )
+
+    app.get('/config', this.configHandler.getAllConfig )
+
+    app.get('/config/:app', this.configHandler.getConfigByApp)
+
+    app.post('/config', this.configHandler.insertConfig)
+
+    // Enable if not in production
+    if (process.env.NODE_ENV !== 'production') {
+      // Endpoint to clear datbaase for a specific app
+      app.delete('/:app/objects', this.objectHandler.deleteAll )
+
+      app.get('/:app/validate/:id', this.configHandler.validate)
     }
 
-    this.server = app;
-    this.port = port;
-    this.db = db;
+    this.server = app
+    this.port = port
+    this.db = db
   }
 
-  listen(callback?: () => void) {
-    let defaultLog = () => {
-      console.log("Server running on port " + this.port);
-    };
-    this.server.listen(this.port, callback || defaultLog);
+  public listen(callback?: () => void) {
+    const defaultLog = () => {
+      log('info', 'Server running on port ' + this.port)
+    }
+    this.server.listen(this.port, callback || defaultLog)
   }
-  server: Express;
-  port: number;
-  db: Database;
+
+  public server: Express
+  public port: number
+  public db: IDatabase
+  public timeStarted: number
+  public objectHandler: ObjectHandler
+  public serverHandler: ServerHandler
+  public configHandler: ConfigHandler
+
 }
