@@ -1,3 +1,6 @@
+import { RedisDatabase } from './redis'
+import { MockDatabase } from './mockDatabase'
+
 export interface IDatabase {
   type: string
   connectionString: string
@@ -9,6 +12,14 @@ export interface IDatabase {
   delAll: (appName: string) => Promise<any>
   overwrite: (appName: string, key: string, object: any) => Promise<any>
   ping: (callback?: () => string) => any
+}
+
+export function createDatabase(connectionString: string): IDatabase {
+  if (connectionString.slice(0, 5) === 'redis') {
+    return new RedisDatabase(connectionString)
+  } else if (connectionString === 'mock') {
+    return new MockDatabase()
+  }
 }
 
 export * from './redis'

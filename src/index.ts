@@ -1,14 +1,12 @@
-import * as express from 'express'
-import { IServer, ExpressServer } from './server'
-import { IDatabase, RedisDatabase } from './database'
+import { Server } from './server'
 
 
-const db: IDatabase = new RedisDatabase('redis://localhost:6379')
-
-const server: IServer = new ExpressServer(
-  express(),
-  parseInt(process.env.PORT, 10) || 3030,
-  db,
+const server: Server = new Server(
+  'redis://localhost:6379',
 )
 
-server.listen()
+server.addSocketListener('test', (data) => {
+  console.log(data)
+})
+
+server.listen(parseInt(process.env.PORT, 10) || 3030)

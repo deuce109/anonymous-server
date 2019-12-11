@@ -20,7 +20,8 @@ export class ConfigHandler {
     }
 
     public insertConfig = async (req: Request, res: Response) => {
-        const result = await this.db.insert(req.body, 'config' )
+        const result = await this.db.insert(req.body, 'config')
+
         if (result === 'conflict') {
             res.status(409).send()
         } else if (result === 'ok') {
@@ -32,18 +33,18 @@ export class ConfigHandler {
 
     public overwrite = async (req: Request, res: Response) => {
         const success = await this.db.overwrite(
-          'config',
-          req.params.id,
-          req.body,
+            'config',
+            req.params.id,
+            req.body,
         )
         res.status(success ? 200 : 500).send()
     }
 
-    public updateWithMerge =  async (req: Request, res: Response) => {
+    public updateWithMerge = async (req: Request, res: Response) => {
         const success = await this.db.update(
-          'config',
-          req.params.id,
-          req.body,
+            'config',
+            req.params.id,
+            req.body,
         )
         res.status(success ? 200 : 500).send()
     }

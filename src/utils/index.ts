@@ -1,20 +1,57 @@
 import { error } from 'console'
-import { appendFileSync } from 'fs'
+import { appendFileSync, existsSync, mkdirSync } from 'fs'
 import { IDataDefinition, IConfig } from '../types'
 import { AES, SHA2 } from '../crypto'
 export function sleep(ms): Promise<any> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+function or(num1, num2) {
+  let binary1 = num1.toString(2)
+  let binary2 = num2.toString(2)
+
+  const targetLength = binary1.length > binary2.length ? binary1.length : binary2.length
+
+  binary1 = binary1.padStart(targetLength, '0')
+  binary2 = binary2.padStart(targetLength, '0')
+
+  let resultString = ''
+
+  for (let i = 0; i < targetLength; i++) {
+    resultString += binary1[i] === '1' || binary2[i] === '1' ? '1' : '0'
+  }
+
+  return parseInt(resultString, 2)
+
+}
+
+function and(num1, num2) {
+  let binary1 = num1.toString(2)
+  let binary2 = num2.toString(2)
+
+  const targetLength = binary1.length > binary2.length ? binary1.length : binary2.length
+
+  binary1 = binary1.padStart(targetLength, '0')
+  binary2 = binary2.padStart(targetLength, '0')
+
+  let resultString = ''
+
+  for (let i = 0; i < targetLength; i++) {
+    resultString += binary1[i] === '1' && binary2[i] === '1' ? '1' : '0'
+  }
+
+  return parseInt(resultString, 2)
+}
+
 export function guid(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    // tslint:disable-next-line: one-variable-per-declaration no-bitwise
-    const r = (Math.random() * 16) | 0,
-      // tslint:disable-next-line: no-bitwise
-      v = c === 'x' ? r : (r & 0x3) | 0x8
+    const r = Math.round((Math.random() * 16))
+    const v = c === 'x' ? r : or(and(r, 0x3), 0x8)
     return v.toString(16)
   })
 }
+
+
 
 export function mergeObjectsWithOverwrite(obj1: any, obj2: any): any {
   if (typeof obj1 === typeof obj2) {
@@ -35,9 +72,13 @@ export function log(
   level: 'debug' | 'info' | 'warn' | 'error' | 'fatal',
   message: string,
 ): void {
+  if (!existsSync('./logs')) {
+    mkdirSync('./logs')
+  }
   const toWrite = `[${level.toUpperCase()}] : ${new Date().toLocaleString()} : ${message} \n`
   appendFileSync('logs/all.log', toWrite)
   appendFileSync(`logs/${level}.log`, toWrite)
+
 }
 
 export function calculateUptime(timeStarted: number): string {
@@ -84,8 +125,6 @@ export function encryptBaseOnConfig(
   config: IConfig,
 ): { data: any; config: IConfig } {
 
-  console.log(obj)
-
   config.data.forEach((definition: IDataDefinition) => {
     if (definition.encryption === 'symmetric') {
       obj[definition.name] = AES.encrypt(definition.type === 'object' || definition.type === 'array' ? JSON.stringify(obj[definition.name]) : obj[definition.name])
@@ -102,7 +141,11 @@ export function decryptBasedOnConfig(obj: any, config: IConfig): { data: any } {
   config.data.forEach((definition: IDataDefinition) => {
     if (definition.encryption === 'symmetric') {
       obj[definition.name] = JSON.parse(AES.decrypt(obj[definition.name].value, obj[definition.name].password, obj[definition.name].salt, obj[definition.name].iv))
+    } else if (definition.encryption === 'asymmetric') {
+      obj[definition.name] = obj[definition.name].value
     }
   })
   return { data: obj }
 }
+
+

@@ -1,8 +1,7 @@
-import { IServer } from './index'
-import { Express } from 'express'
+import { IServer } from '.'
+
 export class MockServer implements IServer {
-  public listen: () => void
-  public server: Express
+  public listen: (port: number, callback?: (...args: any[]) => void) => void
   public port: number
   public db: any
 }

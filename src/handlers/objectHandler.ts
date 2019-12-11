@@ -9,7 +9,10 @@ export class ObjectHandler {
   }
   private db: IDatabase
   public getAll = async (req: Request, res: Response) => {
-    const config = (await this.db.getAll('config')).find((item) => item.appName === req.params.app)
+    const configs = await this.db.getAll('config')
+
+    const config = configs.find((item) => item.appName === req.params.app)
+
     let items = await this.db.getAll(req.params.app)
 
     items = items.map((item) => {
@@ -47,6 +50,7 @@ export class ObjectHandler {
   public insert = async (req: Request, res: Response) => {
     const config: IConfig = (await this.db.getAll('config')).find((item) => item.appName === req.params.app)
     const encryptedData: any = encryptBaseOnConfig(req.body, config)
+
     const result = await this.db.insert(encryptedData.data, req.params.app)
     if (result === 'conflict') {
       res.status(409).send()
