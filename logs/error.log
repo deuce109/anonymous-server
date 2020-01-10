@@ -1,0 +1,2 @@
+[ERROR] : 1/9/2020, 7:17:50 AM : Error: Redis connection to localhost:6380 failed - connect ECONNREFUSED 127.0.0.1:6380 
+[ERROR] : 1/9/2020, 7:17:52 AM : Error: Redis connection to localhost:6380 failed - connect ECONNREFUSED 127.0.0.1:6380 

@@ -1,3 +1,5 @@
+
+
 export interface IConfig {
   data: IDataDefinition[]
   appName: string
@@ -7,11 +9,10 @@ export interface IConfig {
 export interface IDataDefinition {
   name: string
   type: 'number' | 'string' | 'date' | 'boolean' | 'object' | 'array'
-  objectDefinition?: IDataDefinition
+  objectDefinitions?: IDataDefinition[]
   dateFormat?: string
   numberFormat?: {
     type: 'decimal' | 'integer';
-    decimalPoints?: number;
   }
   encryption: 'none' | 'symmetric' | 'asymmetric'
 }

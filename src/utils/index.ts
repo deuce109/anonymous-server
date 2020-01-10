@@ -1,88 +1,50 @@
-import { error } from 'console'
-import { appendFileSync, existsSync, mkdirSync } from 'fs'
-import { IDataDefinition, IConfig } from '../types'
-import { AES, SHA2 } from '../crypto'
+import * as crypto from 'crypto'
+
 export function sleep(ms): Promise<any> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-function or(num1, num2) {
-  let binary1 = num1.toString(2)
-  let binary2 = num2.toString(2)
-
-  const targetLength = binary1.length > binary2.length ? binary1.length : binary2.length
-
-  binary1 = binary1.padStart(targetLength, '0')
-  binary2 = binary2.padStart(targetLength, '0')
-
-  let resultString = ''
-
-  for (let i = 0; i < targetLength; i++) {
-    resultString += binary1[i] === '1' || binary2[i] === '1' ? '1' : '0'
-  }
-
-  return parseInt(resultString, 2)
-
-}
-
-function and(num1, num2) {
-  let binary1 = num1.toString(2)
-  let binary2 = num2.toString(2)
-
-  const targetLength = binary1.length > binary2.length ? binary1.length : binary2.length
-
-  binary1 = binary1.padStart(targetLength, '0')
-  binary2 = binary2.padStart(targetLength, '0')
-
-  let resultString = ''
-
-  for (let i = 0; i < targetLength; i++) {
-    resultString += binary1[i] === '1' && binary2[i] === '1' ? '1' : '0'
-  }
-
-  return parseInt(resultString, 2)
-}
-
 export function guid(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = Math.round((Math.random() * 16))
-    const v = c === 'x' ? r : or(and(r, 0x3), 0x8)
-    return v.toString(16)
+  return ('' + 1e7 + -1e3 + -4e3 + -8e3 + -1e11).toString().replace(/[018]/g, (c) =>
+    (parseInt(c, 10) ^ crypto.randomBytes(1)[0] & 15 >> parseInt(c, 10) / 4).toString(16),
+  )
+}
+
+export function isInt(value) {
+  return Number(value) === value && value % 1 === 0
+}
+
+export function isFloat(value) {
+  return Number(value) === value
+}
+
+
+export function mergeObjectsWithOverwrite(source: object, addition: object): object {
+
+  if (typeof source === 'undefined') {
+    throw new Error('source must not be undefined')
+  }
+  if (typeof addition === 'undefined') {
+    throw new Error('addition must not be undefined')
+  }
+
+  Object.keys(addition).map((key) => {
+    if (typeof source[key] === 'object') {
+      source[key] = mergeObjectsWithOverwrite(source[key], addition[key])
+    } else {
+      source[key] = addition[key]
+    }
   })
-}
-
-
-
-export function mergeObjectsWithOverwrite(obj1: any, obj2: any): any {
-  if (typeof obj1 === typeof obj2) {
-    Object.keys(obj2).map((key) => {
-      if (typeof obj1[key] === 'object') {
-        obj1[key] = mergeObjectsWithOverwrite(obj1[key], obj2[key])
-      } else {
-        obj1[key] = obj2[key]
-      }
-    })
-    return obj1
-  } else {
-    error('Objects must be of the same type')
-  }
-}
-
-export function log(
-  level: 'debug' | 'info' | 'warn' | 'error' | 'fatal',
-  message: string,
-): void {
-  if (!existsSync('./logs')) {
-    mkdirSync('./logs')
-  }
-  const toWrite = `[${level.toUpperCase()}] : ${new Date().toLocaleString()} : ${message} \n`
-  appendFileSync('logs/all.log', toWrite)
-  appendFileSync(`logs/${level}.log`, toWrite)
+  return source
 
 }
+
 
 export function calculateUptime(timeStarted: number): string {
   let uptime: number = Date.now() - timeStarted
+  if (uptime < 0) {
+    throw new Error('timeStarted must not be greater than the current time')
+  }
   const days = Math.floor(uptime / 86400000)
   uptime = uptime - days * 86400000
   const hours = Math.floor(uptime / 3600000)
@@ -92,60 +54,17 @@ export function calculateUptime(timeStarted: number): string {
   const seconds = Math.floor(uptime / 1000)
   uptime = uptime - seconds * 1000
   const milliseconds = uptime
-  return `${days} Days, ${hours} Hours, ${minutes} Minutes, ${seconds} Seconds, ${milliseconds} Milliseconds`
+  return `${days}d, ${hours}h, ${minutes}m, ${seconds}s, ${milliseconds}ms`
 }
 
 export function dateTryParse(
   value: string,
 ): { parsed: boolean; value?: number } {
-  try {
-    const date = Date.parse(value)
-    return { parsed: true, value: date }
-  } catch (e) {
-    log('warn', e.message)
-    return { parsed: false }
-  }
+  const date = Date.parse(value)
+  return !isNaN(date) ? { parsed: true, value: date } : { parsed: false }
+
 }
 
-export function validateDataWithConfig(obj: any, config: IConfig) {
-  let valid: boolean = true
-  config.data.forEach((definition: IDataDefinition) => {
-    const value = obj[definition.name]
-    valid =
-      valid ===
-      (typeof value === definition.type ||
-        (definition.type === 'date' && dateTryParse(value).parsed) ||
-        (definition.type === 'array' && Array.isArray(value)))
-  })
-  return valid
-}
 
-export function encryptBaseOnConfig(
-  obj: any,
-  config: IConfig,
-): { data: any; config: IConfig } {
-
-  config.data.forEach((definition: IDataDefinition) => {
-    if (definition.encryption === 'symmetric') {
-      obj[definition.name] = AES.encrypt(definition.type === 'object' || definition.type === 'array' ? JSON.stringify(obj[definition.name]) : obj[definition.name])
-    } else if (definition.encryption === 'asymmetric') {
-      obj[definition.name] = SHA2.hashWithHmac(obj)
-    }
-  })
-
-  return { data: obj, config }
-}
-
-export function decryptBasedOnConfig(obj: any, config: IConfig): { data: any } {
-
-  config.data.forEach((definition: IDataDefinition) => {
-    if (definition.encryption === 'symmetric') {
-      obj[definition.name] = JSON.parse(AES.decrypt(obj[definition.name].value, obj[definition.name].password, obj[definition.name].salt, obj[definition.name].iv))
-    } else if (definition.encryption === 'asymmetric') {
-      obj[definition.name] = obj[definition.name].value
-    }
-  })
-  return { data: obj }
-}
 
 

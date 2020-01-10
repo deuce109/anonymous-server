@@ -1,7 +1,6 @@
 import { IDatabase } from '../database'
 import { Request, Response } from 'express'
-import { IConfig } from '../types/config'
-import { validateDataWithConfig } from '../utils'
+import { IConfig, verifyConfig, validateDataWithConfig } from '../config'
 
 export class ConfigHandler {
     constructor(db: IDatabase) {
@@ -20,6 +19,10 @@ export class ConfigHandler {
     }
 
     public insertConfig = async (req: Request, res: Response) => {
+        if (!verifyConfig(req.body)) {
+            res.status(400).send()
+            return
+        }
         const result = await this.db.insert(req.body, 'config')
 
         if (result === 'conflict') {
@@ -51,14 +54,8 @@ export class ConfigHandler {
 
     public validate = async (req: Request, res: Response) => {
         const config: IConfig = (await this.db.getAll('config')).find((item) => item.appName === req.params.app)
-        const object: any = await this.db.get(req.params.app, req.params.id)
-
-        const valid = validateDataWithConfig(object, config)
+        const valid = validateDataWithConfig(req.body, config)
         res.send({ valid })
-    }
-
-    public internalUpdate = async (config: IConfig) => {
-        this.db.overwrite('config', config.id, config)
     }
 
     private db: IDatabase

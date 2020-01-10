@@ -1,21 +1,28 @@
 import * as express from 'express'
 import { Express } from 'express'
 import * as socketio from 'socket.io'
+import { Server as HttpServer } from 'http'
 import { IDatabase, createDatabase } from '../database'
 import { ObjectHandler, ConfigHandler, LogHandler, ServerHandler } from '../handlers'
 import { IServer } from '.'
-import { log } from '../utils'
-
+import Logger from '../logging'
 
 export class Server implements IServer {
 
     constructor(dbConnectionString: string) {
 
+        this.listen = this.listen.bind(this)
+
+        this.emitSocketEvent = this.emitSocketEvent.bind(this)
+
+        this.addSocketListener = this.addSocketListener.bind(this)
+
+
         this.app = express()
 
-        const server = require('http').Server(this.app)
+        this.server = new HttpServer(this.app)
 
-        this.io = socketio(server)
+        this.io = socketio(this.server)
 
         // Create database based on connection string
         this.db = createDatabase(dbConnectionString)
@@ -69,22 +76,25 @@ export class Server implements IServer {
         }
     }
 
-    public listen(port: number, callback?: () => void) {
+    public listen(port: number, callback?: () => void): void {
 
-        const defaultLog = () => { log('info', `server listening on port ${port}`) }
+        if (port === undefined || port < 0 || port > 65535) {
+            throw new Error('port must be a valid number less than 65535 and greater than 0')
+        }
 
-        const cb = callback || defaultLog
+        const defaultLog = () => { Logger.info(`Server listening on port ${port}`) }
 
-        this.io.listen(port)
-        cb()
+        this.app.listen(port)
+
+        return (callback || defaultLog)()
     }
 
-    public addSocketListener(name: string, handler: (...args: any[]) => void) {
-        this.io.on(name, handler)
+    public addSocketListener(name: string, handler: (...args: any[]) => void): socketio.Namespace {
+        return this.io.on(name, handler)
     }
 
-    public emitSocketEvent(name: string, ...data: any[]) {
-        this.io.emit(name, ...data)
+    public emitSocketEvent(name: string, ...data: any[]): socketio.Namespace {
+        return this.io.emit(name, ...data)
     }
 
     public port: number
@@ -92,6 +102,7 @@ export class Server implements IServer {
     private configHandler: ConfigHandler
     private serverHandler: ServerHandler
     private app: Express
+    private server: HttpServer
     private io: socketio.Server
     public db: IDatabase
 

@@ -1,7 +1,6 @@
-import { IDatabase } from '../database'
 import { Request, Response } from 'express'
-import { encryptBaseOnConfig, decryptBasedOnConfig } from '../utils'
-import { IConfig } from '../types'
+import { IDatabase } from '../database'
+import { IConfig, decryptBasedOnConfig, encryptBaseOnConfig } from '../config'
 
 export class ObjectHandler {
   constructor(db: IDatabase) {
@@ -18,8 +17,8 @@ export class ObjectHandler {
     items = items.map((item) => {
       return decryptBasedOnConfig(item, config)
     })
-    const result = { result: items }
-    res.send(result)
+
+    res.send({ result: items })
   }
 
   public getById = async (req: Request, res: Response) => {
@@ -49,6 +48,10 @@ export class ObjectHandler {
 
   public insert = async (req: Request, res: Response) => {
     const config: IConfig = (await this.db.getAll('config')).find((item) => item.appName === req.params.app)
+    if (config === undefined || config === null) {
+      res.status(400).send()
+      return
+    }
     const encryptedData: any = encryptBaseOnConfig(req.body, config)
 
     const result = await this.db.insert(encryptedData.data, req.params.app)

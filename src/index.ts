@@ -2,11 +2,7 @@ import { Server } from './server'
 
 
 const server: Server = new Server(
-  'redis://localhost:6379',
+  process.env.CONNECTION_STRING,
 )
-
-server.addSocketListener('test', (data) => {
-  console.log(data)
-})
 
 server.listen(parseInt(process.env.PORT, 10) || 3030)

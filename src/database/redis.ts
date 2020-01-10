@@ -1,11 +1,12 @@
 import { IDatabase } from './index'
 import * as redis from 'redis'
-import { Callback } from 'redis'
-import { guid, sleep, mergeObjectsWithOverwrite, log } from '../utils'
+import { guid, sleep, mergeObjectsWithOverwrite } from '../utils'
+import Logger from '../logging'
+
 export class RedisDatabase implements IDatabase {
   public type = 'redis'
-  public ping(): any {
-    return this.client.ping()
+  public ping(callback?: () => any): any {
+    return callback ? callback() : this.client.ping()
   }
   public async update(appName: string, key: string, object: any): Promise<any> {
     const objectToUpdate = await this.get(appName, key)
@@ -70,14 +71,23 @@ export class RedisDatabase implements IDatabase {
     this.connectionString = connectionString
     this.client = redis.createClient(connectionString)
     this.client.on('connect', () => {
-      log('info', 'Redis connected')
+      Logger.info('Redis connected')
     })
     this.client.on('error', (error: any) => {
-      log('error', error)
+      Logger.error(error)
     })
+
+    this.getAll = this.getAll.bind(this)
+    this.get = this.get.bind(this)
+    this.delAll = this.delAll.bind(this)
+    this.delete = this.delete.bind(this)
+    this.insert = this.insert.bind(this)
+    this.overwrite = this.overwrite.bind(this)
+    this.ping = this.ping.bind(this)
+    this.update = this.update.bind(this)
   }
 
-  public client: redis.RedisClient
+  private client: redis.RedisClient
 
   public connectionString: string
 }

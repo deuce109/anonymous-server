@@ -1,5 +1,5 @@
 import { RedisDatabase } from './redis'
-import { MockDatabase } from './mockDatabase'
+import { MockDatabase } from './mock'
 
 export interface IDatabase {
   type: string
@@ -23,3 +23,4 @@ export function createDatabase(connectionString: string): IDatabase {
 }
 
 export * from './redis'
+export * from './mock'
