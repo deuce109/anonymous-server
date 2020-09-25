@@ -19,7 +19,7 @@ export function isFloat(value) {
 }
 
 
-export function mergeObjectsWithOverwrite(source: object, addition: object): object {
+export function mergeObjectsWithOverwrite(source: any, addition: any): any {
 
   if (typeof source === 'undefined') {
     throw new Error('source must not be undefined')

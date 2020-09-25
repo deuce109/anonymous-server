@@ -6,7 +6,7 @@ import { AES, SHA2 } from '../crypto'
 import { IConfig, IDataDefinition } from './config'
 
 export function verifyConfig(config: IConfig): boolean {
-    let valid = config.data !== undefined && config.appName !== undefined && config.id !== undefined
+    let valid = config.data !== undefined && config.appName !== undefined
     if (!valid) {
         return false
     }
@@ -85,7 +85,7 @@ function validateDataWithDefinition(data: any, definitions: IDataDefinition[]): 
 }
 
 // tslint: enable: no-bitwise
-export function encryptBaseOnConfig(
+export function encryptBasedOnConfig(
     obj: any,
     config: IConfig,
 ): { data: any; config: IConfig } {

@@ -2,70 +2,119 @@ import { IDatabase } from './index'
 import * as redis from 'redis'
 import { guid, sleep, mergeObjectsWithOverwrite } from '../utils'
 import Logger from '../logging'
+import { IIntermediary } from '../types'
 
 export class RedisDatabase implements IDatabase {
-  public type = 'redis'
-  public ping(callback?: () => any): any {
-    return callback ? callback() : this.client.ping()
-  }
-  public async update(appName: string, key: string, object: any): Promise<any> {
-    const objectToUpdate = await this.get(appName, key)
-    const newObject = mergeObjectsWithOverwrite(objectToUpdate, object)
-    const deletePass: any = await this.delete(appName, key)
-    return deletePass ? await this.insert(newObject, appName) : deletePass
-  }
+  public get(appName: string, id: string) {
+    return new Promise<IIntermediary>((resolve, reject) => {
+      this.client.get(`${appName}-${id}`, (err, value) => {
+        if (err !== null && typeof err !== 'undefined') {
+          Logger.error(err.message)
+          reject(err)
+          throw (err)
+        }
 
-  public async delete(appName: string, key: string): Promise<any> {
-    const objects = await this.getAll(appName)
-    const item = objects.find((x) => x.id === key)
-    return this.client.srem(appName, JSON.stringify(item))
-  }
-
-  public async get(appName: string, id: string): Promise<any> {
-    const items = await this.getAll(appName)
-    const item = items.find((x) => x.id === id)
-    return item
-  }
-
-  public async overwrite(appName: string, key: string, object: any): Promise<any> {
-    const deletePass: any = await this.delete(appName, key)
-    return deletePass ? await this.insert(object, appName) : deletePass
-  }
-
-  public async delAll(appName: string): Promise<any> {
-    const objects = await this.getAll(appName)
-    let success = true
-    objects.forEach(
-      async (obj) =>
-        (success =
-          success !== (await this.client.srem(appName, JSON.stringify(obj)))),
-    )
-    return success
-  }
-
-  public async insert(object: any, app: string): Promise<any> {
-    object.id = object.id || guid()
-    const ids = (await this.getAll(app)).map((obj) => {
-      return obj.id
-    })
-    if (ids.includes(object.id)) { return 'conflict' }
-    return this.client.sadd(app, JSON.stringify(object)) ? 'ok' : ''
-  }
-
-  public async getAll(appName: string): Promise<any[]> {
-    const result = []
-
-    const cb = (_, data) => {
-      data.forEach((value: string) => {
-        result.push(JSON.parse(value))
+        resolve(JSON.parse(value) as IIntermediary)
       })
-    }
-
-    await this.client.smembers(appName, cb)
-    await sleep(1000)
-
-    return result
+    })
   }
+  public insert(object: IIntermediary, app: string): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      this.client.scan('0', 'MATCH', `${app}-*`, (err, result) => {
+        object.id = object.id || guid()
+        if (err) {
+          Logger.error(err.message)
+          reject(err)
+          throw (err)
+        }
+        if (result[1].includes(object.id)) {
+          resolve('conflict')
+        }
+        this.client.set(`${app}-${object.id}`, JSON.stringify(object), (error) => {
+          if (error) {
+            Logger.error(error.message)
+            resolve('failed')
+          }
+          resolve(object.id)
+        })
+      })
+    })
+  }
+  public update(appName: string, id: string, object: IIntermediary): Promise<string> {
+    return new Promise<string>(async (resolve, reject) => {
+      try {
+        const oldObject = await this.get(appName, id)
+        const newObject = mergeObjectsWithOverwrite(oldObject, object)
+        this.client.set(`${appName}-${id}`, JSON.stringify(newObject), (error) => {
+          if (error) {
+            Logger.error(error.message)
+            resolve('failed')
+          }
+          resolve('ok')
+        })
+      } catch (e) {
+        Logger.error(e.message)
+        reject(e)
+      }
+    })
+  }
+  public delete(appName: string, id: string): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      this.client.del(`${appName}-${id}`, (err, data) => {
+        if (err) {
+          Logger.error(err.message)
+          resolve('failed')
+        }
+        resolve('ok')
+      })
+    })
+  }
+  public getAll(appName: string): Promise<IIntermediary[]> {
+    return new Promise<IIntermediary[]>((resolve, reject) => {
+      this.client.scan('0', 'MATCH', `${appName}-*`, async (err, results) => {
+        if (err) {
+          Logger.error(err.message)
+          reject(err)
+          throw (err)
+        }
+        const intermediaries: IIntermediary[] = []
+
+        for (const result of results[0]) {
+          intermediaries.push(await this.get(appName, result.replace(`${appName}-`, '')))
+        }
+
+        resolve(intermediaries)
+      })
+    })
+  }
+
+  public delAll(appName: string): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      this.client.scan('0', 'MATCH', `${appName}-*`, (err, data) => {
+        if (err) {
+          Logger.error(err.message)
+          reject(err)
+          throw (err)
+        }
+        data.forEach((key) => this.client.del(key, (error) => {
+          if (error) {
+            Logger.error(error.message)
+            resolve('failed')
+          }
+        }))
+        resolve('ok')
+      })
+    })
+  }
+  public async overwrite(appName: string, key: string, object: IIntermediary): Promise<string> {
+    return (await this.insert(object, appName) === object.id) ? 'ok' : 'failed'
+  }
+  public type = 'redis'
+  public ping(callback: () => any = () => ''): any {
+    callback()
+    return this.client.ping()
+  }
+
 
   constructor(connectionString: string) {
     this.connectionString = connectionString

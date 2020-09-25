@@ -1,7 +1,8 @@
 
 import { MockServer, IServer, Server } from '../src/server'
 import { createSandbox, SinonSpy } from 'sinon'
-import * as socketio from 'socket.io'
+
+const socketIOClient = require('socket.io-client')
 
 describe('Server test suite', () => {
 
@@ -165,14 +166,6 @@ describe('Server test suite', () => {
             expect(typeof server.db).toBe('object')
         })
 
-        // jest.mock('socket.io', () => ({
-        //     __esModule: true, default: () => ({
-        //         events: {},
-        //         on: (name: string, handler: (...args: any[]) => void) => { this.events[name] = handler; return {} as unknown as socketio.Namespace },
-        //         emit: (name: string, ...args: any[]) => { console.log(name); this.events[name](args); return {} as unknown as socketio.Namespace },
-        //     } as unknown as socketio.Server),
-        // }))
-
         it('Should add a socket listener when the addSocketListener function is called and trigger when emitSocketEvent is called', () => {
 
 
@@ -184,9 +177,13 @@ describe('Server test suite', () => {
 
         it('Should trigger event when emitSocketEvent is called', () => {
 
+            const client = socketIOClient('localhost:8080')
+            const clientSpy = sandbox.spy(() => { })
+            client.on('test', clientSpy)
             spy = sandbox.spy(server, 'emitSocketEvent')
             server.emitSocketEvent('test')
             expect(spy.calledWith('test')).toBe(true)
+            expect(spy.called).toBe(true)
         })
     })
 })

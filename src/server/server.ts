@@ -9,6 +9,7 @@ import Logger from '../logging'
 
 export class Server implements IServer {
 
+
     constructor(dbConnectionString: string) {
 
         this.listen = this.listen.bind(this)
@@ -16,7 +17,6 @@ export class Server implements IServer {
         this.emitSocketEvent = this.emitSocketEvent.bind(this)
 
         this.addSocketListener = this.addSocketListener.bind(this)
-
 
         this.app = express()
 
@@ -45,7 +45,7 @@ export class Server implements IServer {
         this.app.put('/:app/objects/:id', this.objectHandler.overwrite)
 
         // Update a specific item for a specified app
-        this.app.patch('/:app/objects/:id', this.objectHandler.updateWithMerge)
+        this.app.patch('/:app/objects/:id', this.objectHandler.update)
 
         // Add a specific item for a specified app
         this.app.post('/:app/objects', this.objectHandler.insert)
@@ -76,6 +76,10 @@ export class Server implements IServer {
         }
     }
 
+    public use(middleware: (req, res, next?) => void) {
+        this.app.use(middleware)
+    }
+
     public listen(port: number, callback?: () => void): void {
 
         if (port === undefined || port < 0 || port > 65535) {
@@ -84,9 +88,8 @@ export class Server implements IServer {
 
         const defaultLog = () => { Logger.info(`Server listening on port ${port}`) }
 
+        (callback || defaultLog)()
         this.app.listen(port)
-
-        return (callback || defaultLog)()
     }
 
     public addSocketListener(name: string, handler: (...args: any[]) => void): socketio.Namespace {

@@ -8,5 +8,5 @@ export interface IServer {
   port: number
   db: IDatabase
 
-
+  use: (middleware: (req: Request, res: Response, next?) => void) => void
 }

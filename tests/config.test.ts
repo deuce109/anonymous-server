@@ -1,4 +1,4 @@
-import { IConfig, encryptBaseOnConfig, decryptBasedOnConfig, validateDataWithConfig, verifyConfig } from '../src/config'
+import { IConfig, encryptBasedOnConfig, decryptBasedOnConfig, validateDataWithConfig, verifyConfig } from '../src/config'
 describe('Config object and related methods test suite', () => {
 
     const config: IConfig = {
@@ -120,7 +120,7 @@ describe('Config object and related methods test suite', () => {
         let encrypted
 
         it('Should return an encrypted value when the config says to', () => {
-            encrypted = encryptBaseOnConfig(testObject, config)
+            encrypted = encryptBasedOnConfig(testObject, config)
             expect(encrypted.data.encrypt.value).not.toBe('test')
             expect(encrypted.data.encrypt.password.length).toBeGreaterThanOrEqual(16)
             expect(encrypted.data.encrypt.iv.length).toBe(32)

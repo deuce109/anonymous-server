@@ -22,12 +22,12 @@
       <div class='fl pad1y space-right2'>
         <span class="strong">100% </span>
         <span class="quiet">Statements</span>
-        <span class='fraction'>9/9</span>
+        <span class='fraction'>13/13</span>
       </div>
       <div class='fl pad1y space-right2'>
-        <span class="strong">75% </span>
+        <span class="strong">100% </span>
         <span class="quiet">Branches</span>
-        <span class='fraction'>3/4</span>
+        <span class='fraction'>9/9</span>
       </div>
       <div class='fl pad1y space-right2'>
         <span class="strong">100% </span>
@@ -37,7 +37,7 @@
       <div class='fl pad1y space-right2'>
         <span class="strong">100% </span>
         <span class="quiet">Lines</span>
-        <span class='fraction'>9/9</span>
+        <span class='fraction'>13/13</span>
       </div>
     </div>
     <p class="quiet">
@@ -72,7 +72,14 @@
 <a name='L24'></a><a href='#L24'>24</a>
 <a name='L25'></a><a href='#L25'>25</a>
 <a name='L26'></a><a href='#L26'>26</a>
-<a name='L27'></a><a href='#L27'>27</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">3x</span>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -88,49 +95,60 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">17x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">16x</span>
 <span class="cline-any cline-yes">12x</span>
-<span class="cline-any cline-yes">12x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { RedisDatabase } from './redis'
 import { MockDatabase } from './mock'
+import { SQLiteDatabase } from './sqlite'
+import { IIntermediary } from '../types'
 &nbsp;
 export interface IDatabase {
   type: string
   connectionString: string
-  get: (appName: string, id: string) =&gt; Promise&lt;any&gt;
-  insert: (object: any, app: string) =&gt; Promise&lt;any&gt;
-  update: (appName: string, key: string, object) =&gt; Promise&lt;any&gt;
-  delete: (appName: string, key: string) =&gt; Promise&lt;any&gt;
-  getAll: (appName: string) =&gt; Promise&lt;any[]&gt;
-  delAll: (appName: string) =&gt; Promise&lt;any&gt;
-  overwrite: (appName: string, key: string, object: any) =&gt; Promise&lt;any&gt;
-  ping: (callback?: () =&gt; string) =&gt; any
+  get: (appName: string, id: string) =&gt; Promise&lt;IIntermediary&gt;
+  insert: (object: IIntermediary, app: string) =&gt; Promise&lt;string&gt;
+  update: (appName: string, id: string, object: IIntermediary) =&gt; Promise&lt;string&gt;
+  delete: (appName: string, id: string) =&gt; Promise&lt;string&gt;
+  getAll: (appName: string) =&gt; Promise&lt;IIntermediary[]&gt;
+  delAll: (appName: string) =&gt; Promise&lt;string&gt;
+  overwrite: (appName: string, id: string, object: IIntermediary) =&gt; Promise&lt;any&gt;
+  ping: (callback?: () =&gt; string) =&gt; boolean
 }
 &nbsp;
+const windowsFilePathRegex: RegExp = /[A-Z]\:(\\[\w\d\ \^\&amp;\'\@\{\}\[\]\,\$\=\!\-\#\(\)\%\.\+\~\_]+)*/
+&nbsp;
+const unixFilePathRegex: RegExp = /^(((?:\.\/|\.\.\/|\/)?(?:\.?\w+\/)*)(\.?\w+\.?\w+))$/
 export function createDatabase(connectionString: string): IDatabase {
   if (connectionString.slice(0, 5) === 'redis') {
     return new RedisDatabase(connectionString)
-  } else <span class="missing-if-branch" title="else path not taken" >E</span>if (connectionString === 'mock') {
+  } else if (connectionString === 'mock') {
     return new MockDatabase()
+  } else if (windowsFilePathRegex.test(connectionString) || unixFilePathRegex.test(connectionString) || connectionString === ':memory:') {
+    return new SQLiteDatabase(connectionString)
+  } else {
+    return undefined
   }
 }
-&nbsp;
-export * from './redis'
-export * from './mock'
 &nbsp;</pre></td></tr>
 </table></pre>
 <div class='push'></div><!-- for sticky footer -->
 </div><!-- /wrapper -->
 <div class='footer quiet pad2 space-top1 center small'>
   Code coverage
-  generated by <a href="https://istanbul.js.org/" target="_blank">istanbul</a> at Fri Jan 10 2020 09:23:29 GMT-0600 (Central Standard Time)
+  generated by <a href="https://istanbul.js.org/" target="_blank">istanbul</a> at Thu Mar 05 2020 08:00:37 GMT-0600 (Central Standard Time)
 </div>
 </div>
 <script src="..\prettify.js"></script>

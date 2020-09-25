@@ -1,3 +1,13 @@
 {
-    "typescript.tsdk": "node_modules\\typescript\\lib"
+    "typescript.tsdk": "node_modules\\typescript\\lib",
+    "sqltools.connections": [
+        {
+            "database": "./db/test.db",
+            "dialect": "SQLite",
+            "isActive": false,
+            "isConnected": false,
+            "name": "SQLITE"
+        }
+    ],
+    "sqltools.useNodeRuntime": true
 }

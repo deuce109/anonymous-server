@@ -1,2 +1,2 @@
-[ERROR] : 1/9/2020, 7:17:50 AM : Error: Redis connection to localhost:6380 failed - connect ECONNREFUSED 127.0.0.1:6380 
-[ERROR] : 1/9/2020, 7:17:52 AM : Error: Redis connection to localhost:6380 failed - connect ECONNREFUSED 127.0.0.1:6380 
+[ERROR] : 3/4/2020, 1:10:27 PM : Cannot read property 'mock2' of null 
+[ERROR] : 3/4/2020, 1:13:44 PM : Cannot read property 'mock2' of null 

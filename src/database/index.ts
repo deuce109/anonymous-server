@@ -1,26 +1,32 @@
 import { RedisDatabase } from './redis'
 import { MockDatabase } from './mock'
+import { SQLiteDatabase } from './sqlite'
+import { IIntermediary } from '../types'
 
 export interface IDatabase {
   type: string
   connectionString: string
-  get: (appName: string, id: string) => Promise<any>
-  insert: (object: any, app: string) => Promise<any>
-  update: (appName: string, key: string, object) => Promise<any>
-  delete: (appName: string, key: string) => Promise<any>
-  getAll: (appName: string) => Promise<any[]>
-  delAll: (appName: string) => Promise<any>
-  overwrite: (appName: string, key: string, object: any) => Promise<any>
-  ping: (callback?: () => string) => any
+  get: (appName: string, id: string) => Promise<IIntermediary>
+  insert: (object: IIntermediary, app: string) => Promise<string>
+  update: (appName: string, id: string, object: IIntermediary) => Promise<string>
+  delete: (appName: string, id: string) => Promise<string>
+  getAll: (appName: string) => Promise<IIntermediary[]>
+  delAll: (appName: string) => Promise<string>
+  overwrite: (appName: string, id: string, object: IIntermediary) => Promise<any>
+  ping: (callback?: () => string) => boolean
 }
 
+const windowsFilePathRegex: RegExp = /[A-Z]\:(\\[\w\d\ \^\&\'\@\{\}\[\]\,\$\=\!\-\#\(\)\%\.\+\~\_]+)*/
+
+const unixFilePathRegex: RegExp = /^(((?:\.\/|\.\.\/|\/)?(?:\.?\w+\/)*)(\.?\w+\.?\w+))$/
 export function createDatabase(connectionString: string): IDatabase {
   if (connectionString.slice(0, 5) === 'redis') {
     return new RedisDatabase(connectionString)
   } else if (connectionString === 'mock') {
     return new MockDatabase()
+  } else if (windowsFilePathRegex.test(connectionString) || unixFilePathRegex.test(connectionString) || connectionString === ':memory:') {
+    return new SQLiteDatabase(connectionString)
+  } else {
+    return undefined
   }
 }
-
-export * from './redis'
-export * from './mock'

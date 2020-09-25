@@ -1,10 +1,11 @@
 import { LogHandler, ConfigHandler, ServerHandler, ObjectHandler } from '../src/handlers'
 import { Request, Response } from 'express'
 import { createSandbox } from 'sinon'
-import { createDatabase, MockDatabase } from '../src/database'
+import { createDatabase } from '../src/database'
 import { IConfig } from '../src/config'
-import * as path from 'path'
 import Logger from '../src/logging'
+import { MockDatabase } from '../src/database/mock'
+import { IIntermediary } from '../src/types'
 describe('Handler test suite', () => {
 
 
@@ -104,6 +105,7 @@ describe('Handler test suite', () => {
         })
 
         it('Should merge two configs when merge is called', async () => {
+            console.log('configHandler')
             request = { params: { id: '1' }, body: { appName: 'Mock', id: '1', data: [] } } as unknown as Request
             response = { send, status } as unknown as Response
             await configHandler.updateWithMerge(request, response)
@@ -203,17 +205,18 @@ describe('Handler test suite', () => {
             expect(status.calledWith(400)).toBe(true)
         })
 
-        it('Should update an exising object when updateWithMerge is called', async () => {
+        it('Should update an exising object when update is called', async () => {
+            console.log('objectHandler')
             const mergeObject = { foo: 'FOO' }
             request = { body: mergeObject, params: { app: 'mock', id: '2' } } as unknown as Request
-            await objectHandler.updateWithMerge(request, response)
+            await objectHandler.update(request, response)
             expect(status.calledWith(200)).toBe(true)
         })
 
         it('Should return an array of objects when getAll is called', async () => {
             request = { params: { app: 'mock' } } as unknown as Request
             await objectHandler.getAll(request, response)
-            expect(send.calledWith({ result: [{ data: { foo: 'FOO', bar: 'bar', id: '2' } }] })).toBe(true)
+            expect(send.calledWith({ result: [{ bar: 'bar', id: '2', foo: 'FOO' }] })).toBe(true)
         })
 
         it('Should overwrite an existing database entry when the overwrite function is called', async () => {
@@ -235,13 +238,13 @@ describe('Handler test suite', () => {
         })
 
         jest.mock('../src/database', () => ({
-            createDatabase,
+            createDatabase: (connectionString) => new MockDatabase(),
             MockDatabase: {
-                insert: () => null,
-                overwrite: () => false,
-                updateWithMerge: () => false,
-                delete: () => false,
-                deleteAll: () => false,
+                insert: (object: IIntermediary, app: string) => new Promise<string>((resolve, reject) => { resolve('failed') }),
+                overwrite: (appName: string, id: string, object: IIntermediary) => new Promise<string>((resolve, reject) => { resolve('failed') }),
+                update: (appName: string, id: string, object: IIntermediary) => new Promise<string>((resolve, reject) => { resolve('failed') }),
+                delete: (appName: string, id: string) => new Promise<string>((resolve, reject) => { resolve('failed') }),
+                delAll: (appName: string) => new Promise<string>((resolve, reject) => { resolve('failed') }),
             },
         }))
 
@@ -255,7 +258,7 @@ describe('Handler test suite', () => {
             expect(status.calledWith(500)).toBe(true)
             await objectHandler.overwrite(request, response)
             expect(status.calledWith(500)).toBe(true)
-            await objectHandler.updateWithMerge(request, response)
+            await objectHandler.update(request, response)
             expect(status.calledWith(500)).toBe(true)
         })
 
@@ -264,5 +267,7 @@ describe('Handler test suite', () => {
             await configHandler.insertConfig(request, response)
             expect(status.calledWith(500)).toBe(true)
         })
+
+        jest.unmock('../src/database')
     })
 })

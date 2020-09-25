@@ -1,8 +1,9 @@
 import { Server } from './server'
+import { tryCatch } from './middleware'
 
 
 const server: Server = new Server(
-  process.env.CONNECTION_STRING,
+  './db/test.db',
 )
-
+server.use(tryCatch)
 server.listen(parseInt(process.env.PORT, 10) || 3030)
